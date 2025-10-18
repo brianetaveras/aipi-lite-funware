@@ -44,6 +44,7 @@ void eraseNVS()
     esp_err_t err = nvs_flash_erase();
     if (err == ESP_OK)
     {
+        ESP.restart();
         return;
     }
 
