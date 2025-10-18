@@ -10,12 +10,7 @@
 WebServer server(80);
 Network net;
 
-static const char *kIndexPath = "/index.html";
-static const char *kIndexPathGz = "/index.html.gz"; // optional gzip
-static const char *kCssPath = "/nes.min.css";
-static const char *kCssPathGz = "/nes.min.css.gz"; // optional gzip
-static const char *kFontPath = "/fonts/PressStart2P.woff2";
-
+bool AccessPointEnabled = false;
 String AccessPointSSID = "BSoft_Setup";
 String AccessPointPassword = "";
 
@@ -131,34 +126,58 @@ void Network::startAccessPoint()
     WiFi.mode(WIFI_AP);
     WiFi.softAP(AccessPointSSID.c_str(), AccessPointPassword.c_str());
 
-    // HTML route: load template, inject SSIDs
-    server.on("/", HTTP_GET, []
-              {
-        const char* path = fileExists(kIndexPath) ? kIndexPath : nullptr;
-        const char* gz   = fileExists(kIndexPathGz) ? kIndexPathGz : nullptr;
-        Serial.printf("[DEBUG] GET /: path=%s gz=%s\n", path ? path : "(null)", gz ? gz : "(null)");
-        if (!path) {
-            Serial.println("[ERROR] index.html not found in FS");
-            server.send(404, "text/plain", "index.html not found");
-            return;
-        }
-        File f = openFile(path, "r");
-        if (!f || !f.available()) {
-            Serial.printf("[ERROR] Failed to open index.html: %s\n", path);
-            server.send(500, "text/plain", "index open failed");
-            return;
-        }
-        String html; html.reserve(f.size() + 512);
-        while (f.available()) html += (char)f.read();
-        f.close();
-        html.replace(F("%%SSID_OPTIONS%%"), buildSsidOptions());
-        server.send(200, "text/html; charset=UTF-8", html); });
 
-    // Static assets
-    server.on("/nes.min.css", HTTP_GET, []
-              { sendStaticFile(kCssPath, kCssPathGz, "text/css"); });
-    server.on("/fonts/PressStart2P.woff2", HTTP_GET, []
-              { sendStaticFile(kFontPath, nullptr, "font/woff2"); });
+    // Serve all files in /web directory
+    server.onNotFound([]() {
+        String uri = server.uri();
+        String fsPath = "/web" + uri;
+        String gzPath = fsPath + ".gz";
+
+        Serial.printf("[DEBUG] onNotFound: uri=%s fsPath=%s gzPath=%s\n", uri.c_str(), fsPath.c_str(), gzPath.c_str());
+
+        // Special case for root: serve index.html
+        if (uri == "/" || uri.length() == 0) {
+            fsPath = "/web/index.html";
+            gzPath = fsPath + ".gz";
+        }
+
+        // Determine MIME type
+        String mimeType = "text/plain";
+        if (fsPath.endsWith(".html")) mimeType = "text/html";
+        else if (fsPath.endsWith(".css")) mimeType = "text/css";
+        else if (fsPath.endsWith(".js")) mimeType = "application/javascript";
+        else if (fsPath.endsWith(".woff2")) mimeType = "font/woff2";
+        else if (fsPath.endsWith(".png")) mimeType = "image/png";
+        else if (fsPath.endsWith(".jpg") || fsPath.endsWith(".jpeg")) mimeType = "image/jpeg";
+        else if (fsPath.endsWith(".svg")) mimeType = "image/svg+xml";
+
+        // Prefer gzip if present
+        if (fileExists(gzPath.c_str())) {
+            File f = openFile(gzPath.c_str(), "r");
+            if (!f || !f.available()) {
+                server.send(500, "text/plain", "FS open error (gz)");
+                return;
+            }
+            server.sendHeader("Cache-Control", "max-age=31536000");
+            server.sendHeader("Content-Encoding", "gzip");
+            server.streamFile(f, mimeType);
+            f.close();
+            return;
+        }
+        // Fallback to plain
+        if (fileExists(fsPath.c_str())) {
+            File f = openFile(fsPath.c_str(), "r");
+            if (!f || !f.available()) {
+                server.send(404, "text/plain", "Not found (plain)");
+                return;
+            }
+            server.sendHeader("Cache-Control", "max-age=31536000");
+            server.streamFile(f, mimeType);
+            f.close();
+            return;
+        }
+        server.send(404, "text/plain", "File not found");
+    });
 
     // POST handler
     server.on("/", HTTP_POST, []
@@ -199,6 +218,9 @@ void Network::connectToWiFi(const char *ssid, const char *password)
     // Optionally, add code here to check connection status and update the display
     if (WiFi.status() == WL_CONNECTED)
     {
+
+        AccessPointEnabled = false;
+        server.stop();
         lcd.fillScreen(ST7735_BLACK);
 
         lcd.setCursor(10, 30);
@@ -231,6 +253,7 @@ void setupNetwork()
     if (!net.isNetworkConfigured())
     {
         net.startAccessPoint();
+        AccessPointEnabled = true;
         lcd.fillScreen(ST7735_BLACK);
         lcd.setCursor(10, 10);
         lcd.setTextColor(ST7735_WHITE);
@@ -262,6 +285,10 @@ void networkLoop()
     {
         return;
     }
-    server.handleClient();
-    delay(10);
+
+    if (AccessPointEnabled)
+    {
+        server.handleClient();
+        delay(10);
+    }
 }
