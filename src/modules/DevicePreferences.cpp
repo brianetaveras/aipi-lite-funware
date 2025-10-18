@@ -1,4 +1,5 @@
 #include "DevicePreferences.h"
+#include "modules/Display.h"
 
 Preferences devicePrefrerences;
 
@@ -44,6 +45,8 @@ void eraseNVS()
     esp_err_t err = nvs_flash_erase();
     if (err == ESP_OK)
     {
+        displayCenterAnnouncement("Device preferences erased.\nRestarting...");
+        delay(2000);
         ESP.restart();
         return;
     }
