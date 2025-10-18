@@ -7,3 +7,4 @@ extern Adafruit_ST7735 lcd;
 void setupDisplay();
 void displayLoop();
 void wakeScreen();
+void displayCenterAnnouncement(const String &message);
