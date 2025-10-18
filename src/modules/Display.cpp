@@ -29,7 +29,7 @@ void setupDisplay()
 }
 
 unsigned long lastScreenTime = 0;
-const int screenTimeout = 10000;
+const int screenTimeout = 30000;
 void restScreen()
 {
 
