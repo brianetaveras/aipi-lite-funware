@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WiFi Setup</title>
+
+  <!-- Local NES.css -->
+  <link rel="stylesheet" href="/nes.min.css">
+
+  <!-- Local font -->
+  <link rel="preload" href="/fonts/PressStart2P.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face {
+      font-family: "Press Start 2P";
+      src: url("/fonts/PressStart2P.woff2") format("woff2");
+      font-display: swap;
+    }
+    html, body { font-family: "Press Start 2P", system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div class="nes-container with-title is-centered" style="max-width:400px;margin:40px auto">
+    <p class="title">WiFi Setup</p>
+    <form method="POST">
+      <div class="nes-field">
+        <label for="ssid" class="nes-text">SSID</label>
+        <div class="nes-select">
+          <select name="ssid" id="ssid">
+            %%SSID_OPTIONS%%
+          </select>
+        </div>
+      </div>
+      <div class="nes-field" style="margin-top:1em">
+        <label for="password" class="nes-text">Password</label>
+        <input name="password" id="password" type="password" class="nes-input" required>
+      </div>
+      <button type="submit" class="nes-btn is-primary" style="width:100%;margin-top:1.5em">Connect</button>
+    </form>
+  </div>
+</body>
+</html>
