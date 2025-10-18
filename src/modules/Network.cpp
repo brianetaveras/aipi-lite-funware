@@ -245,11 +245,6 @@ void setupNetwork()
         lcd.setCursor(10, 90);
         lcd.println("http://192.168.4.1");
 
-        while (true)
-        {
-            server.handleClient();
-            delay(10);
-        }
         return;
     }
 
@@ -261,10 +256,10 @@ void setupNetwork()
     net.connectToWiFi(wifi_ssid.c_str(), wifi_password.c_str());
 }
 
-
 void networkLoop()
 {
-    if (net.isNetworkConfigured()){
+    if (net.isNetworkConfigured())
+    {
         return;
     }
     server.handleClient();
