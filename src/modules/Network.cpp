@@ -127,19 +127,39 @@ void Network::startAccessPoint()
     WiFi.softAP(AccessPointSSID.c_str(), AccessPointPassword.c_str());
 
 
-    // Serve all files in /web directory
+
+    // Special handler for root: inject SSID options into HTML
+    server.on("/", HTTP_GET, [] {
+        const char* kIndexPath = "/web/index.html";
+        const char* kIndexPathGz = "/web/index.html.gz";
+        const char* path = fileExists(kIndexPath) ? kIndexPath : nullptr;
+        const char* gz   = fileExists(kIndexPathGz) ? kIndexPathGz : nullptr;
+        Serial.printf("[DEBUG] GET /: path=%s gz=%s\n", path ? path : "(null)", gz ? gz : "(null)");
+        if (!path) {
+            Serial.println("[ERROR] index.html not found in FS");
+            server.send(404, "text/plain", "index.html not found");
+            return;
+        }
+        File f = openFile(path, "r");
+        if (!f || !f.available()) {
+            Serial.printf("[ERROR] Failed to open index.html: %s\n", path);
+            server.send(500, "text/plain", "index open failed");
+            return;
+        }
+        String html; html.reserve(f.size() + 512);
+        while (f.available()) html += (char)f.read();
+        f.close();
+        html.replace(F("%%SSID_OPTIONS%%"), buildSsidOptions());
+        server.send(200, "text/html; charset=UTF-8", html);
+    });
+
+    // Serve all other files in /web directory as static
     server.onNotFound([]() {
         String uri = server.uri();
         String fsPath = "/web" + uri;
         String gzPath = fsPath + ".gz";
 
-        Serial.printf("[DEBUG] onNotFound: uri=%s fsPath=%s gzPath=%s\n", uri.c_str(), fsPath.c_str(), gzPath.c_str());
-
-        // Special case for root: serve index.html
-        if (uri == "/" || uri.length() == 0) {
-            fsPath = "/web/index.html";
-            gzPath = fsPath + ".gz";
-        }
+        Serial.printf("[DEBUG] onNotFound: uri_length=%d uri=%s fsPath=%s gzPath=%s\n", uri.length(), uri.c_str(), fsPath.c_str(), gzPath.c_str());
 
         // Determine MIME type
         String mimeType = "text/plain";
@@ -151,32 +171,8 @@ void Network::startAccessPoint()
         else if (fsPath.endsWith(".jpg") || fsPath.endsWith(".jpeg")) mimeType = "image/jpeg";
         else if (fsPath.endsWith(".svg")) mimeType = "image/svg+xml";
 
-        // Prefer gzip if present
-        if (fileExists(gzPath.c_str())) {
-            File f = openFile(gzPath.c_str(), "r");
-            if (!f || !f.available()) {
-                server.send(500, "text/plain", "FS open error (gz)");
-                return;
-            }
-            server.sendHeader("Cache-Control", "max-age=31536000");
-            server.sendHeader("Content-Encoding", "gzip");
-            server.streamFile(f, mimeType);
-            f.close();
-            return;
-        }
-        // Fallback to plain
-        if (fileExists(fsPath.c_str())) {
-            File f = openFile(fsPath.c_str(), "r");
-            if (!f || !f.available()) {
-                server.send(404, "text/plain", "Not found (plain)");
-                return;
-            }
-            server.sendHeader("Cache-Control", "max-age=31536000");
-            server.streamFile(f, mimeType);
-            f.close();
-            return;
-        }
-        server.send(404, "text/plain", "File not found");
+        Serial.printf("[DEBUG] Serving file: %s (gzip: %s)\n", fsPath.c_str(), fileExists(gzPath.c_str()) ? "yes" : "no");
+        sendStaticFile(fsPath.c_str(), fileExists(gzPath.c_str()) ? gzPath.c_str() : nullptr, mimeType.c_str());
     });
 
     // POST handler
