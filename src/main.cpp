@@ -5,33 +5,22 @@
 #include "modules/Network.h"
 #include "modules/Filesystem.h"
 #include "modules/DevicePreferences.h"
-
-volatile bool buttonPressed = false;
-
-void IRAM_ATTR handleButtonPress()
-{
-
-  buttonPressed = !buttonPressed;
-  wakeScreen();
-}
+#include "modules/InputModule.h"
 
 void setup()
 {
   Serial.begin(115200);
-
+  setupInput();
   setupDisplay();
-
   setupDevicePreferences();
   setupFileSystem();
   delay(2000); // just to see the boot logo
   setupNetwork();
-
-  pinMode(ACTION_BTN_1_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(ACTION_BTN_1_PIN), handleButtonPress, FALLING);
 }
 
 void loop()
 {
+  inputLoop();
   displayLoop();
   networkLoop();
 }

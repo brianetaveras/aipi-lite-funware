@@ -33,7 +33,7 @@ To get the board to boot mode the first time you flash, you need to remove the 4
 To enable GZIP for static assets:
 ```sh
 cd data
-gzip -k index.html nes.min.css fonts/PressStart2P.woff2
+gzip -k ./web/**
 ```
 Re-upload the filesystem after gzipping.
 

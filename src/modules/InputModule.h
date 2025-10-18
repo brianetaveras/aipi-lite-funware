@@ -1,0 +1,2 @@
+void inputLoop();
+void setupInput();
