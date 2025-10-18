@@ -2,7 +2,7 @@
 
 I started this project with to explore adding a custom software to the XOROGIN AI PI-LITE board. I am not a  C++ developer so there may be a lot of bugs and less than ideal implementations.
 
-To get the board to boot mode the first time you flash, you need to remove the 4 back screws and bress the button behind the screen while plugging-in the device. My plan is to make a tamagochi-like device, but make it as unhinged as I can. This is not a serious project, just a fun experiment. 
+To get the board to boot mode the first time you flash, you need to remove the 4 back screws and press the button behind the screen while plugging-in the device. My plan is to make a tamagochi-like device, but make it as unhinged as I can. This is not a serious project, just a fun experiment. 
 
 
 ## Done:
