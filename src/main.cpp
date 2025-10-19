@@ -10,6 +10,12 @@
 void setup()
 {
   Serial.begin(115200);
+
+  // This is here to make sure the device stays powered on using the battery.
+  // I'll probably move this to a battery module later when I start showing battery status. :)
+  pinMode(GPIO_NUM_10, OUTPUT);
+  digitalWrite(GPIO_NUM_10, HIGH);
+
   setupInput();
   setupDisplay();
   setupDevicePreferences();
