@@ -4,15 +4,25 @@
 #include "modules/DevicePreferences.h"
 
 volatile bool mainButtonPressed = false;
-static unsigned long buttonPressDuration = 0;
+static unsigned long mainButtonPressTime = 0;
+
+volatile bool secondaryButtonPressed = false;
+volatile unsigned long secondaryButtonPressTime = 0;
 #define LONG_PRESS_DURATION 10000 // 10 seconds in milliseconds
 
-
-void IRAM_ATTR handleButtonPress()
+void IRAM_ATTR handleButtonOnePress()
 {
 
     mainButtonPressed = true;
-    buttonPressDuration = millis();
+    mainButtonPressTime = millis();
+    wakeScreen();
+    Serial.printf("Screen dimensions are %dx%d\n", lcd.width(), lcd.height());
+}
+
+void IRAM_ATTR handleButtonTwoPress()
+{
+    secondaryButtonPressed = true;
+    secondaryButtonPressTime = millis();
     wakeScreen();
 }
 
@@ -20,13 +30,15 @@ void setupInput()
 {
 
     pinMode(ACTION_BTN_1_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(ACTION_BTN_1_PIN), handleButtonPress, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ACTION_BTN_1_PIN), handleButtonOnePress, FALLING);
+
+    pinMode(ACTION_BTN_2_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(ACTION_BTN_2_PIN), handleButtonTwoPress, FALLING);
 }
 void onButtonLongPress()
 {
     eraseNVS();
 }
-
 
 void checkButtonLongPress()
 {
@@ -36,7 +48,7 @@ void checkButtonLongPress()
     }
 
     unsigned long currentTime = millis();
-    unsigned long heldTime = currentTime - buttonPressDuration;
+    unsigned long heldTime = currentTime - mainButtonPressTime;
     if (heldTime >= LONG_PRESS_DURATION)
     {
         onButtonLongPress();
@@ -47,8 +59,14 @@ void checkButtonLongPress()
 void inputLoop()
 {
     checkButtonLongPress();
-    if (mainButtonPressed && digitalRead(ACTION_BTN_1_PIN) == HIGH) {
+    if (mainButtonPressed && digitalRead(ACTION_BTN_1_PIN) == HIGH)
+    {
         mainButtonPressed = false;
-        buttonPressDuration = 0;
+        mainButtonPressTime = 0;
+    }
+    if (secondaryButtonPressed && digitalRead(ACTION_BTN_2_PIN) == HIGH)
+    {
+        secondaryButtonPressed = false;
+        secondaryButtonPressTime = 0;
     }
 }

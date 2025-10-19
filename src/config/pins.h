@@ -2,7 +2,7 @@
 
 
 #define ACTION_BTN_1_PIN 42
-#define ACTION_BTN_2_PIN 43
+#define ACTION_BTN_2_PIN 1
 
 
 #define BACKLIGHT_PIN 3
