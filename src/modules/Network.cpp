@@ -6,6 +6,8 @@
 
 #include <modules/Display.h>
 #include "DevicePreferences.h"
+#include "Sprites.h"
+#include "Pet.h"
 
 WebServer server(80);
 Network net;
@@ -126,10 +128,29 @@ void Network::startAccessPoint()
     WiFi.mode(WIFI_AP);
     WiFi.softAP(AccessPointSSID.c_str(), AccessPointPassword.c_str());
 
+    // Register event handler for AP station connection
+    WiFi.onEvent([](WiFiEvent_t event)
+                 {
+        if (event == ARDUINO_EVENT_WIFI_AP_STACONNECTED) {
+            // Placeholder: handle new station connection
+            wakeScreen();
+            Serial.println("Device connected to AP (event detected)");
 
+            lcd.fillScreen(ST7735_BLACK);
+
+            lcd.drawBitmap(0, 0, setup_qr_code, 128, 128, ST7735_WHITE);
+
+            lcd.setCursor(25, 115);
+            lcd.setTextColor(ST7735_BLACK);
+
+            lcd.setTextSize(1);
+            lcd.print("Scan to setup");
+
+        } });
 
     // Special handler for root: inject SSID options into HTML
-    server.on("/", HTTP_GET, [] {
+    server.on("/", HTTP_GET, []
+              {
         const char* kIndexPath = "/web/index.html";
         const char* kIndexPathGz = "/web/index.html.gz";
         const char* path = fileExists(kIndexPath) ? kIndexPath : nullptr;
@@ -150,8 +171,7 @@ void Network::startAccessPoint()
         while (f.available()) html += (char)f.read();
         f.close();
         html.replace(F("%%SSID_OPTIONS%%"), buildSsidOptions());
-        server.send(200, "text/html; charset=UTF-8", html);
-    });
+        server.send(200, "text/html; charset=UTF-8", html); });
 
     // Serve all other files in /web directory as static
     server.onNotFound([]() {
@@ -172,8 +192,7 @@ void Network::startAccessPoint()
         else if (fsPath.endsWith(".svg")) mimeType = "image/svg+xml";
 
         Serial.printf("[DEBUG] Serving file: %s (gzip: %s)\n", fsPath.c_str(), fileExists(gzPath.c_str()) ? "yes" : "no");
-        sendStaticFile(fsPath.c_str(), fileExists(gzPath.c_str()) ? gzPath.c_str() : nullptr, mimeType.c_str());
-    });
+        sendStaticFile(fsPath.c_str(), fileExists(gzPath.c_str()) ? gzPath.c_str() : nullptr, mimeType.c_str()); });
 
     // POST handler
     server.on("/", HTTP_POST, []
@@ -181,10 +200,7 @@ void Network::startAccessPoint()
                   String ssid = server.arg("ssid");
                   String password = server.arg("password");
                   net.handleFormSubmission(ssid.c_str(), password.c_str());
-                  server.send(200, "text/plain", "Credentials saved. Rebooting...");
-                  //   delay(1000);
-                  //   ESP.restart();
-              });
+                  server.send(200, "text/plain", "Credentials saved. Rebooting..."); });
 
     server.begin();
 }
@@ -219,11 +235,7 @@ void Network::connectToWiFi(const char *ssid, const char *password)
         server.stop();
         lcd.fillScreen(ST7735_BLACK);
 
-        lcd.setCursor(10, 30);
-        lcd.println("Connected!");
-        lcd.setCursor(10, 50);
-        lcd.print("IP: ");
-        lcd.println(WiFi.localIP().toString());
+        setupPetModule();
 
         setNetworkPreferences(String(ssid), String(password));
         return;
@@ -248,21 +260,20 @@ void setupNetwork()
 
     if (!net.isNetworkConfigured())
     {
+
+        wakeScreen();
         net.startAccessPoint();
         AccessPointEnabled = true;
+
         lcd.fillScreen(ST7735_BLACK);
-        lcd.setCursor(10, 10);
-        lcd.setTextColor(ST7735_WHITE);
+
+        lcd.drawBitmap(0, 0, network_qr_code, 128, 128, ST7735_WHITE);
+
+        lcd.setCursor(10, 115);
+        lcd.setTextColor(ST7735_BLACK);
+
         lcd.setTextSize(1);
-        lcd.println("Network Config Mode");
-        lcd.setCursor(10, 30);
-        lcd.println("SSID: " + AccessPointSSID);
-        lcd.setCursor(10, 50);
-        lcd.println("Password: " + AccessPointPassword);
-        lcd.setCursor(10, 70);
-        lcd.println("Navigate to:");
-        lcd.setCursor(10, 90);
-        lcd.println("http://192.168.4.1");
+        lcd.print("Scan QR to Connect");
 
         return;
     }

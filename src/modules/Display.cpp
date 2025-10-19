@@ -11,13 +11,12 @@ void setupDisplay()
     pinMode(BACKLIGHT_PIN, OUTPUT);
     digitalWrite(BACKLIGHT_PIN, HIGH);
 
-    lcd.initR(INITR_144GREENTAB); // For 1.44" 128x128 ST7735 (128x128)
+    lcd.initR(INITR_18GREENTAB); // Initialize a ST7735S chip, no init code
     lcd.fillScreen(ST7735_BLACK);
-    lcd.enableDisplay(true);
-
-    lcd.setCursor(0, 0);
 
     lcd.setRotation(3);
+    lcd.setCursor(0, 0);
+
 
     // Show the boot logo
     lcd.drawBitmap(0, 0, boot_image, 128, 128, ST7735_WHITE);
@@ -28,7 +27,7 @@ void setupDisplay()
 }
 
 unsigned long lastScreenTime = 0;
-const int screenTimeout = 30000;
+const int screenTimeout = 60000; // 60 seconds
 void restScreen()
 {
 
@@ -48,7 +47,6 @@ void displayLoop()
 {
     restScreen();
 }
-
 
 void displayCenterAnnouncement(const String &message)
 {
